@@ -12,7 +12,8 @@ use App\Http\Controllers\{
     NotificationController,
     StatistiqueController,
     UserController,
-    ZoneController
+    ZoneController,
+    TacheController
 };
 use Illuminate\Http\Request;
 
@@ -74,6 +75,14 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::prefix('cellules')->controller(CelluleController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::post('/', 'store');
+            Route::get('/{id}', 'show');
+            Route::put('/{id}', 'update');
+            Route::delete('/{id}', 'destroy');
+        });
+        Route::prefix('taches')->controller(TacheController::class)->group(function () {
+            Route::get('/recentes', 'recentes'); // ✅ avant /{id}
             Route::get('/', 'index');
             Route::post('/', 'store');
             Route::get('/{id}', 'show');
