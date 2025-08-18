@@ -1,37 +1,33 @@
 FROM php:8.2-apache
 
+# Installer les dépendances système
 RUN apt-get update && apt-get install -y \
+    git \
+    zip \
+    unzip \
+    libzip-dev \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
-    zip \
-    unzip \
-    git \
-    curl \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+    libpq-dev \
+    && docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd zip
 
-RUN a2enmod rewrite
-
-COPY . /var/www/html
-
-WORKDIR /var/www/html
-
+# Installer Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN composer install --optimize-autoloader --no-dev
+# Copier l'application
+COPY . /var/www/html
 
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Configurer Apache
+COPY apache.conf /etc/apache2/sites-available/000-default.conf
+RUN a2enmod rewrite
 
-RUN echo "<Directory /var/www/html/public>\n\
-    Options Indexes FollowSymLinks\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>" > /etc/apache2/conf-available/laravel.conf \
-    && a2enconf laravel
+# Installer les dépendances
+RUN composer install --no-dev --optimize-autoloader
 
-EXPOSE 80
+# Définir les permissions
+RUN chown -R www-data:www-data /var/www/html/storage
+RUN chown -R www-data:www-data /var/www/html/bootstrap/cache
 
-# The new lines to add
-COPY start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
-CMD ["start.sh"]
+# Exécuter les migrations et démarrer Apache
+CMD php artisan migrate --force && apache2-foreground
