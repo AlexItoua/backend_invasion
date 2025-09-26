@@ -5,13 +5,16 @@ builder = "nixpacks"
 BP_PHP_VERSION = "8.2"
 BP_PHP_WEB_DIR = "public"
 
+[phases.install]
+cmds = ["composer install --no-dev --optimize-autoloader --no-interaction"]
+
+[phases.build]
+cmds = [
+    "php artisan config:clear",
+    "php artisan cache:clear"
+]
+
 [deploy]
 startCommand = "php artisan serve --host=0.0.0.0 --port=$PORT"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
-numReplicas = 1
-sleepApplication = false
-
-# Health check optionnel
-healthcheckPath = "/api/v1/zones"
-healthcheckTimeout = 300
