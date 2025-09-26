@@ -10,61 +10,46 @@ class StatistiqueSeeder extends Seeder
 {
     public function run(): void
     {
-        // Récupération des campagnes par leur nom
-        $salongo = DB::table('campagnes')->where('nom', 'like', 'Opération Salongo%')->first();
-        $potoPoto = DB::table('campagnes')->where('nom', 'Evangélisation Poto-Poto')->first();
-        $vaccination = DB::table('campagnes')->where('nom', 'Campagne de vaccination Makélékélé')->first();
+        DB::table('statistiques')->delete();
 
-        if (!$salongo || !$potoPoto || !$vaccination) {
-            dump('❌ Campagnes manquantes, vérifie les noms dans CampagneSeeder.');
-            return;
+        $campagneId = DB::table('campagnes')->where('nom', 'Invasion 2025')->value('id');
+
+        if (!$campagneId) {
+            $campagneId = DB::table('campagnes')->insertGetId([
+                'nom' => 'Invasion 2025',
+                'date_debut' => Carbon::create(2025, 1, 1),
+                'date_fin' => Carbon::create(2025, 12, 31),
+                'zone_id' => 1,
+                'description' => 'Grande campagne d\'évangélisation et de mobilisation spirituelle pour 2025.',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         $statistiques = [
-            // Salongo
             [
-                'campagne_id' => $salongo->id,
-                'total_ames' => 42,
-                'baptises' => 15,
-                'fidelises' => 28,
-                'nouvelles_ames' => 12,
-                'date_generation' => Carbon::create(2024, 3, 25),
-            ],
-            [
-                'campagne_id' => $salongo->id,
-                'total_ames' => 56,
-                'baptises' => 22,
-                'fidelises' => 38,
-                'nouvelles_ames' => 8,
-                'date_generation' => Carbon::create(2024, 4, 30),
-            ],
-
-            // Poto-Poto
-            [
-                'campagne_id' => $potoPoto->id,
-                'total_ames' => 78,
-                'baptises' => 31,
-                'fidelises' => 45,
+                'campagne_id' => $campagneId,
+                'total_ames' => 100,
+                'baptises' => 40,
+                'fidelises' => 60,
                 'nouvelles_ames' => 25,
-                'date_generation' => Carbon::create(2024, 4, 15),
+                'taux_conversion' => 40.0,
+                'taux_fidelisation' => 60.0,
+                'date_generation' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
-                'campagne_id' => $potoPoto->id,
-                'total_ames' => 92,
-                'baptises' => 45,
-                'fidelises' => 67,
-                'nouvelles_ames' => 14,
-                'date_generation' => Carbon::create(2024, 5, 20),
-            ],
-
-            // Makélékélé (vaccination)
-            [
-                'campagne_id' => $vaccination->id,
-                'total_ames' => 35,
-                'baptises' => 12,
-                'fidelises' => 22,
-                'nouvelles_ames' => 18,
-                'date_generation' => Carbon::create(2024, 6, 10),
+                'campagne_id' => $campagneId,
+                'total_ames' => 120,
+                'baptises' => 55,
+                'fidelises' => 80,
+                'nouvelles_ames' => 30,
+                'taux_conversion' => 45.8,
+                'taux_fidelisation' => 66.7,
+                'date_generation' => Carbon::create(2024, 6, 30),
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
         ];
 

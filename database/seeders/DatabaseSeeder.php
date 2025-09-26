@@ -9,26 +9,31 @@ use App\Models\Interaction;
 use App\Models\ParcoursSpirituel;
 use Illuminate\Database\Seeder;
 
+use function GuzzleHttp\choose_handler;
+
 class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
      */
-public function run()
-{
-    $this->call([
-        ZoneSeeder::class,
-        UserSeeder::class,
-        CampagneSeeder::class,
-        CelluleSeeder::class,
-        AmeSeeder::class,
-        ParcoursSpirituelSeeder::class,
-        InteractionSeeder::class,
-        EtapeValideeSeeder::class,
-        NotificationSeeder::class,
-        StatistiqueSeeder::class,
-        RoleSeeder::class,
-    ]);
-}
+    public function run()
+    {
+        $this->call([
+            ZoneSeeder::class,
+            UserSeeder::class,
+            CampagneSeeder::class,
+            CelluleSeeder::class,
+            AmeSeeder::class,
+            ParcoursSpirituelSeeder::class,
+            InteractionSeeder::class,
+            ParcoursAmeSeeder::class,
+            EtapeValideeSeeder::class,
+            NotificationSeeder::class,
+            StatistiqueSeeder::class,
+            RoleSeeder::class,
+            ChatSeeder::class
 
+
+        ]);
+    }
 }

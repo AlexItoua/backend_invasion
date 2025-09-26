@@ -49,7 +49,7 @@ class UserController extends Controller
                 'email' => 'required|email|unique:users,email',
                 'password' => 'required|string|min:8',
                 'telephone' => 'nullable|string|max:20',
-                'role' => 'required|in:evangeliste,encadreur,admin',
+                'role' => 'required|in:evangeliste,encadreur,admin,gagneur',
                 'zone_id' => 'nullable|exists:zones,id',
             ]);
 
@@ -109,10 +109,10 @@ class UserController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'nom' => 'sometimes|required|string|max:255',
-                'email' => 'sometimes|required|email|unique:users,email,'.$user->id,
+                'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
                 'password' => 'sometimes|string|min:8',
                 'telephone' => 'nullable|string|max:20',
-                'role' => 'sometimes|required|in:evangeliste,encadreur,admin',
+                'role' => 'required|in:evangeliste,encadreur,admin,gagneur',
                 'zone_id' => 'nullable|exists:zones,id',
             ]);
 

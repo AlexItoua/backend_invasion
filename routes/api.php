@@ -13,7 +13,10 @@ use App\Http\Controllers\{
     StatistiqueController,
     UserController,
     ZoneController,
-    TacheController
+    TacheController,
+    ParcoursAmesController,
+    EtapeParcoursController,
+    ChatController
 };
 use Illuminate\Http\Request;
 
@@ -47,9 +50,13 @@ Route::prefix('v1')->group(function () {
         });
 
         // Routes avec préfixes
+        // Routes pour les âmes
         Route::prefix('ames')->controller(AmeController::class)->group(function () {
-            Route::get('/recentes', 'recentes'); // ✅ mettre AVANT /{id}
-
+            // Route pour les âmes récentes (doit être placée avant /{id})
+            Route::get('/recentes', 'recentes');
+            Route::get('{ame}/conversations', [AmeController::class, 'conversations']);
+            Route::get('/nearby', 'nearBy');
+            Route::get('/stats', 'stats');
             Route::get('/', 'index');
             Route::post('/', 'store');
             Route::get('/{id}', 'show');
@@ -89,6 +96,14 @@ Route::prefix('v1')->group(function () {
             Route::put('/{id}', 'update');
             Route::delete('/{id}', 'destroy');
         });
+        Route::prefix('etape-parcours')->controller(EtapeParcoursController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::post('/', 'store');
+            Route::get('/{id}', 'show');
+            Route::put('/{id}', 'update');
+            Route::delete('/{id}', 'destroy');
+        });
+
 
         Route::prefix('interactions')->controller(InteractionController::class)->group(function () {
             Route::get('/', 'index');
@@ -98,21 +113,42 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{id}', 'destroy');
         });
 
+        Route::prefix('conversations')->controller(ChatController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::post('/', 'store');
+            Route::get('/{conversation}/messages', 'messages');
+            Route::post('/{conversation}/messages', 'sendMessage');
+            Route::post('/{conversation}/read', 'markAsRead');
+        });
+
+
+        // Routes pour les parcours spirituels
         Route::prefix('parcours-spirituels')->controller(ParcoursSpirituelController::class)->group(function () {
             Route::get('/', 'index');
             Route::post('/', 'store');
             Route::get('/{id}', 'show');
             Route::put('/{id}', 'update');
             Route::delete('/{id}', 'destroy');
+
+            // Nouvelles routes pour la gestion des parcours des âmes
+            Route::post('/{id}/demarrer', 'demarrerParcours');
+            Route::get('/{id}/progression/{ameId}', 'progression');
         });
 
-        Route::prefix('etapes-validees')->controller(EtapeValideeController::class)->group(function () {
-            Route::get('/', 'index');
-            Route::post('/', 'store');
-            Route::get('/{id}', 'show');
-            Route::put('/{id}', 'update');
-            Route::delete('/{id}', 'destroy');
+        // Routes pour la gestion des étapes validées
+        Route::prefix('parcours-ames')->controller(ParcoursAmesController::class)->group(function () {
+            Route::post('/valider-etape', 'validerEtape');
+            Route::get('/en-cours/{ameId}', 'parcoursEnCours');
         });
+
+        Route::prefix('etape-validees')->controller(EtapeValideeController::class)->group(function () {
+            Route::get('/', 'index');            // Liste toutes les étapes validées (avec filtres possibles)
+            Route::post('/', 'store');           // Crée une nouvelle étape validée
+            Route::get('/{id}', 'show');         // Récupère une étape validée spécifique
+            Route::put('/{id}', 'update');       // Met à jour une étape validée existante
+            Route::delete('/{id}', 'destroy');   // Supprime une étape validée (soft delete)
+        });
+
 
         Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
             Route::get('/', 'index');

@@ -2,61 +2,86 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Notification extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'titre',
+        'destinataire_id',
+        'destinataire_type', // 'user' ou 'ame'
         'message',
         'type',
-        'destinataire_id',
-        'statut',
-        'date_envoi',
-        'metadata'
+        'lu',
+        'date_notification'
     ];
 
     protected $casts = [
-        'date_envoi' => 'datetime',
-        'metadata' => 'array',
+        'lu' => 'boolean',
+        'date_notification' => 'datetime',
     ];
 
-    protected $with = ['destinataire'];
-
-    public function destinataire()
+    /**
+     * Relation avec l'âme (quand destinataire_type = 'ame')
+     */
+    public function ame()
     {
-        return $this->belongsTo(User::class, 'destinataire_id');
+        return $this->belongsTo(Ame::class, 'destinataire_id')
+            ->where('destinataire_type', 'ame');
     }
 
-    // Scopes utiles
-    public function scopePourDestinataire($query, $userId)
+    /**
+     * Relation avec l'utilisateur (quand destinataire_type = 'user')
+     */
+    public function user()
     {
-        return $query->where('destinataire_id', $userId);
+        return $this->belongsTo(User::class, 'destinataire_id')
+            ->where('destinataire_type', 'user');
     }
 
-    public function scopeNonLues($query)
+    /**
+     * Obtenir le destinataire selon le type
+     */
+    public function getDestinataireAttribute()
     {
-        return $query->where('statut', '!=', 'lue');
+        if ($this->destinataire_type === 'ame') {
+            return $this->ame;
+        }
+        return $this->user;
     }
 
-    public function scopeAEnvoyer($query)
+    /**
+     * Marquer comme lu
+     */
+    public function markAsRead()
     {
-        return $query->where('statut', 'en_attente')
-                    ->where('date_envoi', '<=', now());
+        return $this->update(['lu' => true]);
     }
 
-    public function scopeParType($query, $type)
+    /**
+     * Scope pour les notifications non lues
+     */
+    public function scopeUnread($query)
+    {
+        return $query->where('lu', false);
+    }
+
+    /**
+     * Scope pour un type spécifique
+     */
+    public function scopeOfType($query, $type)
     {
         return $query->where('type', $type);
     }
 
-    // Marquer comme lue
-    public function marquerCommeLue()
+    /**
+     * Scope pour un destinataire spécifique
+     */
+    public function scopeForRecipient($query, $recipientId, $recipientType = 'user')
     {
-        $this->update(['statut' => 'lue']);
-        return $this;
+        return $query->where('destinataire_id', $recipientId)
+            ->where('destinataire_type', $recipientType);
     }
 }

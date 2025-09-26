@@ -9,34 +9,40 @@ class Ame extends Model
 {
     use HasFactory;
 
-    // Dans app/Models/Ame.php
-protected $fillable = [
-    'nom',
-    'telephone',
-    'sexe',
-    'age',
-    'adresse',
-    'date_conversion',
-    'campagne_id',
-    'type_decision',
-    'latitude',
-    'longitude',
-    'assigne_a',
-    'cellule_id',
-    'image',
-    'suivi', // 👈 ajouté
-    'derniere_interaction', // 👈 ajouté
-];
-
+    protected $fillable = [
+        'nom',
+        'telephone',
+        'device_token',
+        'notifications_actives',
+        'image',
+        'suivi',
+        'derniere_interaction',
+        'sexe',
+        'age',
+        'adresse',
+        'quartier',
+        'ville',
+        'date_conversion',
+        'campagne_id',
+        'type_decision',
+        'latitude',
+        'longitude',
+        'geoloc_accuracy',
+        'geoloc_timestamp',
+        'assigne_a',
+        'cellule_id',
+    ];
 
     protected $casts = [
         'date_conversion' => 'date',
         'age' => 'integer',
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
+        'geoloc_accuracy' => 'decimal:2',
+        'geoloc_timestamp' => 'datetime',
         'derniere_interaction' => 'date',
-'suivi' => 'boolean',
-
+        'suivi' => 'boolean',
+        'notifications_actives' => 'boolean',
     ];
 
     protected $with = ['campagne', 'encadreur', 'cellule'];
@@ -50,11 +56,11 @@ protected $fillable = [
     {
         return $this->belongsTo(User::class, 'assigne_a');
     }
+
     public function getImageUrlAttribute()
     {
         return $this->image ? asset('storage/' . $this->image) : null;
     }
-
 
     public function cellule()
     {
@@ -71,7 +77,16 @@ protected $fillable = [
         return $this->hasMany(EtapeValidee::class);
     }
 
-    // Scopes utiles
+    public function conversations()
+    {
+        return $this->hasMany(Conversation::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class, 'destinataire_id');
+    }
+
     public function scopePourCampagne($query, $campagneId)
     {
         return $query->where('campagne_id', $campagneId);
@@ -87,13 +102,21 @@ protected $fillable = [
         return $query->whereNotNull('latitude')->whereNotNull('longitude');
     }
 
-    // Accesseurs
+    public function scopeWithinRadius($query, $lat, $lng, $radius = 10)
+    {
+        return $query->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance", [$lat, $lng, $lat])
+            ->having('distance', '<', $radius)
+            ->orderBy('distance');
+    }
+
     public function getPositionAttribute()
     {
         if ($this->latitude && $this->longitude) {
             return [
                 'latitude' => (float)$this->latitude,
-                'longitude' => (float)$this->longitude
+                'longitude' => (float)$this->longitude,
+                'accuracy' => (float)$this->geoloc_accuracy,
+                'timestamp' => $this->geoloc_timestamp
             ];
         }
         return null;

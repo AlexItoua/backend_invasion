@@ -8,120 +8,75 @@ use Carbon\Carbon;
 
 class AmeSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $ames = [
-            // Âmes de la campagne Bacongo
-            [
-                'nom' => 'Jean Kimbangu',
-                'telephone' => '242054512345',
-                'sexe' => 'H',
-                'age' => 32,
-                'adresse' => 'Avenue Matsoua, Bacongo',
-                'date_conversion' => Carbon::create(2024, 1, 20),
-                'campagne_id' => 1,
-                'type_decision' => 'Première décision',
-                'latitude' => -4.2694400,
-                'longitude' => 15.2711100,
-                'assigne_a' => 3,
-                'cellule_id' => 1,
-                'image' => 'https://images.pexels.com/photos/14931950/pexels-photo-14931950.jpeg',
-                 'suivi' => true,
-    'derniere_interaction' => Carbon::create(2024, 2, 18),
-            ],
-            [
-                'nom' => 'Marie Loubaki',
-                'telephone' => '242055523456',
-                'sexe' => 'F',
-                'age' => 28,
-                'adresse' => 'Rue Loutassi, Bacongo',
-                'date_conversion' => Carbon::create(2024, 2, 15),
-                'campagne_id' => 1,
-                'type_decision' => 'Rédication',
-                'latitude' => -4.2700000,
-                'longitude' => 15.2720000,
-                'assigne_a' => 4,
-                'cellule_id' => 1,
-                'image' => 'https://images.pexels.com/photos/7372390/pexels-photo-7372390.jpeg',
-                 'suivi' => false,
-    'derniere_interaction' => Carbon::create(2024, 2, 20),
-            ],
+        DB::table('ames')->delete();
 
-            // Âmes de la campagne Poto-Poto
-            [
-                'nom' => 'Marcelline Nkounkou',
-                'telephone' => '242066634567',
-                'sexe' => 'F',
-                'age' => 45,
-                'adresse' => 'Avenue Foch, Poto-Poto',
-                'date_conversion' => Carbon::create(2024, 3, 5),
-                'campagne_id' => 2,
-                'type_decision' => 'Première décision',
-                'latitude' => -4.2638900,
-                'longitude' => 15.2791700,
-                'assigne_a' => 2,
-                'cellule_id' => 2,
-                'image' => 'https://images.pexels.com/photos/16748461/pexels-photo-16748461.jpeg',
-                'suivi' => true,
-    'derniere_interaction' => Carbon::create(2024, 3, 7),
-            ],
-            [
-                'nom' => 'Didier Mboungou',
-                'telephone' => '242067745678',
-                'sexe' => 'H',
-                'age' => 22,
-                'adresse' => 'Rue Mfoa, Poto-Poto',
-                'date_conversion' => null,
-                'campagne_id' => 2,
-                'type_decision' => 'En réflexion',
-                'latitude' => -4.2650000,
-                'longitude' => 15.2800000,
-                'assigne_a' => 5,
-                'cellule_id' => 3,
-                'image' => 'https://images.pexels.com/photos/5945245/pexels-photo-5945245.jpeg',
-                 'suivi' => false,
-    'derniere_interaction' => null,
-            ],
+        // Récupérer les IDs
+        $userIds = DB::table('users')->pluck('id')->toArray();
+        $celluleIds = DB::table('cellules')->pluck('id')->toArray();
+        $campagneId = DB::table('campagnes')->where('nom', 'Invasion 2025')->value('id');
 
-            // Âmes de la campagne Talangaï
-            [
-                'nom' => 'Grâce Okombi',
-                'telephone' => '242078856789',
-                'sexe' => 'F',
-                'age' => 35,
-                'adresse' => 'Quartier 15, Talangaï',
-                'date_conversion' => Carbon::create(2024, 4, 10),
-                'campagne_id' => 3,
-                'type_decision' => 'Renouvellement',
-                'latitude' => -4.2200000,
-                'longitude' => 15.3000000,
-                'assigne_a' => 6,
-                'cellule_id' => 4,
-                'image' => 'https://images.pexels.com/photos/7088971/pexels-photo-7088971.jpeg',
-                 'suivi' => true,
-    'derniere_interaction' => Carbon::create(2024, 5, 1),
-            ],
-            [
-                'nom' => 'Jonathan Itoua',
-                'telephone' => '242079967890',
-                'sexe' => 'H',
-                'age' => 19,
-                'adresse' => 'Quartier 20, Talangaï',
-                'date_conversion' => Carbon::create(2024, 5, 12),
-                'campagne_id' => 3,
-                'type_decision' => 'Première décision',
-                'latitude' => -4.2250000,
-                'longitude' => 15.3050000,
-                'assigne_a' => 7,
-                'cellule_id' => 4,
-                'image' => 'https://images.pexels.com/photos/15451658/pexels-photo-15451658.jpeg',
-                'suivi' => false,
-    'derniere_interaction' => Carbon::create(2024, 5, 18),
-            ],
+        if (!$campagneId) {
+            $campagneId = DB::table('campagnes')->insertGetId([
+                'nom' => 'Invasion 2025',
+                'date_debut' => Carbon::create(2025, 1, 1),
+                'date_fin' => Carbon::create(2025, 12, 31),
+                'zone_id' => 1,
+                'description' => 'Grande campagne d\'évangélisation et de mobilisation spirituelle pour 2025.',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $donnees = [
+            ['nom' => 'Nensa bimpe olan', 'telephone' => '053338505', 'adresse' => 'jack opango', 'sexe' => 'homme'],
+            ['nom' => 'Dykoka-Ngolo Benie Nathan', 'telephone' => '067819985', 'adresse' => '45 Avenue de la Liberté', 'sexe' => 'homme'],
+            ['nom' => 'Dykoka-Ngolo Trésors', 'telephone' => '068597869', 'adresse' => '45 Avenue de la Liberté', 'sexe' => 'homme'],
+            ['nom' => 'Itoua julia princia', 'telephone' => '066762383', 'adresse' => '145 Itoumbi rue Owando', 'sexe' => 'femme'],
+            ['nom' => 'Ikama rugie christ', 'telephone' => '066929917', 'adresse' => '121 Och Mougali', 'sexe' => 'homme'],
+            ['nom' => 'Zita diane', 'telephone' => '065195856', 'adresse' => '12 rue des Marthyre', 'sexe' => 'femme'],
+            ['nom' => 'Nensa junior Olsen', 'telephone' => '69331121', 'adresse' => '57 Mazala', 'sexe' => 'homme'],
+            ['nom' => 'Itoua yves caleb', 'telephone' => '068731172', 'adresse' => '145 Itoumbi rue Owando', 'sexe' => 'homme'],
         ];
+
+        $imagesHommes = [
+            'https://images.pexels.com/photos/33552516/pexels-photo-33552516.jpeg',
+            'https://images.pexels.com/photos/13169320/pexels-photo-13169320.jpeg',
+            'https://images.pexels.com/photos/13328793/pexels-photo-13328793.jpeg',
+            'https://images.pexels.com/photos/11931208/pexels-photo-11931208.jpeg',
+        ];
+
+        $imageFemme = 'https://images.pexels.com/photos/10294305/pexels-photo-10294305.jpeg';
+
+        $ames = [];
+        foreach ($donnees as $d) {
+            $ames[] = [
+                'nom' => $d['nom'],
+                'telephone' => $d['telephone'],
+                'sexe' => $d['sexe'],
+                'age' => rand(18, 60),
+                'adresse' => $d['adresse'],
+                'quartier' => 'Non défini',
+                'ville' => 'Brazzaville',
+                'date_conversion' => now()->subDays(rand(1, 100)),
+                'campagne_id' => $campagneId,
+                'type_decision' => 'Première décision',
+                'latitude' => null,
+                'longitude' => null,
+                'geoloc_accuracy' => null,
+                'geoloc_timestamp' => null,
+                'assigne_a' => !empty($userIds) ? $userIds[array_rand($userIds)] : null,
+                'cellule_id' => !empty($celluleIds) ? $celluleIds[array_rand($celluleIds)] : null,
+                'image' => $d['sexe'] === 'homme'
+                    ? $imagesHommes[array_rand($imagesHommes)]
+                    : $imageFemme,
+                'suivi' => false,
+                'derniere_interaction' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
 
         DB::table('ames')->insert($ames);
     }
