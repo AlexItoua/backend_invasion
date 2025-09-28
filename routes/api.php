@@ -19,14 +19,9 @@ use App\Http\Controllers\{
     ChatController
 };
 use Illuminate\Http\Request;
-// Ajoutez ceci au début de votre fichier api.php, avant Route::prefix('v1')
-Route::get('/', function () {
-    return response()->json([
-        'status' => true,
-        'message' => 'API Backend Invasion - Service opérationnel',
-        'version' => '1.0.0'
-    ]);
-});
+
+// ❌ ROUTE RACINE SUPPRIMÉE POUR ÉVITER LE CONFLIT
+// Cette route est maintenant gérée par web.php
 
 Route::prefix('v1')->group(function () {
     // Authentification (routes publiques)
@@ -79,7 +74,8 @@ Route::prefix('v1')->group(function () {
             Route::put('/{id}', 'update');
             Route::delete('/{id}', 'destroy');
         });
-        // Dans api.php
+
+        // Routes cartes
         Route::prefix('cartes')->group(function () {
             Route::get('ames-par-zone', [AmeController::class, 'cartesData']);
         });
@@ -96,15 +92,9 @@ Route::prefix('v1')->group(function () {
             Route::put('/{id}', 'update');
             Route::delete('/{id}', 'destroy');
         });
+
         Route::prefix('taches')->controller(TacheController::class)->group(function () {
-            Route::get('/recentes', 'recentes'); // ✅ avant /{id}
-            Route::get('/', 'index');
-            Route::post('/', 'store');
-            Route::get('/{id}', 'show');
-            Route::put('/{id}', 'update');
-            Route::delete('/{id}', 'destroy');
-        });
-        Route::prefix('etape-parcours')->controller(EtapeParcoursController::class)->group(function () {
+            Route::get('/recentes', 'recentes');
             Route::get('/', 'index');
             Route::post('/', 'store');
             Route::get('/{id}', 'show');
@@ -112,6 +102,13 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{id}', 'destroy');
         });
 
+        Route::prefix('etape-parcours')->controller(EtapeParcoursController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::post('/', 'store');
+            Route::get('/{id}', 'show');
+            Route::put('/{id}', 'update');
+            Route::delete('/{id}', 'destroy');
+        });
 
         Route::prefix('interactions')->controller(InteractionController::class)->group(function () {
             Route::get('/', 'index');
@@ -128,7 +125,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/{conversation}/messages', 'sendMessage');
             Route::post('/{conversation}/read', 'markAsRead');
         });
-
 
         // Routes pour les parcours spirituels
         Route::prefix('parcours-spirituels')->controller(ParcoursSpirituelController::class)->group(function () {
@@ -150,13 +146,12 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::prefix('etape-validees')->controller(EtapeValideeController::class)->group(function () {
-            Route::get('/', 'index');            // Liste toutes les étapes validées (avec filtres possibles)
-            Route::post('/', 'store');           // Crée une nouvelle étape validée
-            Route::get('/{id}', 'show');         // Récupère une étape validée spécifique
-            Route::put('/{id}', 'update');       // Met à jour une étape validée existante
-            Route::delete('/{id}', 'destroy');   // Supprime une étape validée (soft delete)
+            Route::get('/', 'index');
+            Route::post('/', 'store');
+            Route::get('/{id}', 'show');
+            Route::put('/{id}', 'update');
+            Route::delete('/{id}', 'destroy');
         });
-
 
         Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
             Route::get('/', 'index');
@@ -166,11 +161,12 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{id}', 'destroy');
             Route::post('mark-as-read', 'markAsRead');
         });
+
         Route::prefix('statistiques')->controller(StatistiqueController::class)->group(function () {
             Route::get('/', 'index');
             Route::post('/', 'store');
 
-            // ⚠️ Les routes fixes en premier
+            // Routes fixes en premier
             Route::get('hebdomadaires', 'statsHebdomadaires');
             Route::get('mensuelles', 'statsMensuelles');
 
