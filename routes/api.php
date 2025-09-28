@@ -19,6 +19,14 @@ use App\Http\Controllers\{
     ChatController
 };
 use Illuminate\Http\Request;
+// Ajoutez ceci au début de votre fichier api.php, avant Route::prefix('v1')
+Route::get('/', function () {
+    return response()->json([
+        'status' => true,
+        'message' => 'API Backend Invasion - Service opérationnel',
+        'version' => '1.0.0'
+    ]);
+});
 
 Route::prefix('v1')->group(function () {
     // Authentification (routes publiques)
