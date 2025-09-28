@@ -1,93 +1,64 @@
 #!/bin/bash
 
-echo "🚀 Starting Laravel Invasion Backend..."
+echo "🚀 Starting Laravel Invasion API on Railway..."
 
-# Variables d'environnement
+# Variables Railway
 export PORT=${PORT:-8080}
-export APP_ENV=${APP_ENV:-production}
-export APP_DEBUG=${APP_DEBUG:-false}
+export APP_ENV=production
+export APP_DEBUG=false
 
-echo "📋 Environment: $APP_ENV"
-echo "🔧 Debug mode: $APP_DEBUG"
 echo "🌐 Port: $PORT"
+echo "🔧 Environment: $APP_ENV"
+echo "🐛 Debug: $APP_DEBUG"
 
-# Vérifier les permissions
-echo "🔐 Checking file permissions..."
+# Permissions essentielles
 chmod -R 755 storage bootstrap/cache
-chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+chmod -R 775 storage/app storage/framework storage/logs
 
-# Attendre la base de données
-echo "💾 Waiting for database connection..."
-sleep 3
+# Test de connexion à la base de données
+echo "💾 Testing database connection..."
+php artisan migrate:status || {
+    echo "❌ Database connection issue, checking config..."
+    echo "DB_HOST: $DB_HOST"
+    echo "DB_PORT: $DB_PORT"
+    echo "DB_DATABASE: $DB_DATABASE"
+}
 
-# Générer la clé d'application si nécessaire
-if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "" ]; then
+# Générer la clé si nécessaire
+if [ -z "$APP_KEY" ]; then
     echo "🔑 Generating application key..."
     php artisan key:generate --force --no-interaction
 fi
 
-# Vérifier la connexion à la base de données
-echo "🔍 Testing database connection..."
-php artisan migrate:status --no-interaction || {
-    echo "❌ Database connection failed. Continuing anyway..."
-}
+# Migrations avec retry
+echo "📊 Running migrations..."
+for i in {1..3}; do
+    php artisan migrate --force --no-interaction && break
+    echo "Migration attempt $i failed, retrying in 5 seconds..."
+    sleep 5
+done
 
-# Exécuter les migrations
-echo "📊 Running database migrations..."
-php artisan migrate --force --no-interaction || {
-    echo "⚠️ Migrations failed, but continuing..."
-}
+# Optimisations production
+echo "⚡ Optimizing for production..."
+php artisan config:cache --no-interaction
+php artisan route:cache --no-interaction
+php artisan view:cache --no-interaction
 
-# Seed si nécessaire (uniquement en développement)
-if [ "$APP_ENV" = "local" ] || [ "$APP_ENV" = "development" ]; then
-    echo "🌱 Seeding database..."
-    php artisan db:seed --force --no-interaction || {
-        echo "⚠️ Seeding failed, but continuing..."
-    }
-fi
-
-# Créer le lien de stockage
+# Storage link
 echo "🔗 Creating storage link..."
-php artisan storage:link --force || {
-    echo "⚠️ Storage link creation failed, but continuing..."
-}
+php artisan storage:link --force --no-interaction
 
-# Optimisations pour la production
-if [ "$APP_ENV" = "production" ]; then
-    echo "⚡ Optimizing for production..."
+# Vérification finale
+echo "🏥 Final health check..."
+php artisan about --no-interaction
 
-    # Cache des configurations
-    php artisan config:cache --no-interaction || echo "⚠️ Config cache failed"
-
-    # Cache des routes
-    php artisan route:cache --no-interaction || echo "⚠️ Route cache failed"
-
-    # Cache des vues
-    php artisan view:cache --no-interaction || echo "⚠️ View cache failed"
-
-    # Cache des événements
-    php artisan event:cache --no-interaction || echo "⚠️ Event cache failed"
-else
-    echo "🧹 Clearing caches for development..."
-    php artisan config:clear --no-interaction
-    php artisan route:clear --no-interaction
-    php artisan view:clear --no-interaction
-    php artisan cache:clear --no-interaction
-fi
-
-# Vérifier l'état de l'application
-echo "🏥 Application health check..."
-php artisan about --no-interaction || echo "⚠️ Health check not available"
-
-# Message de démarrage
 echo ""
-echo "🎉 Laravel application ready!"
-echo "📡 API Base URL: /api/v1"
-echo "🔒 Authentication: Laravel Sanctum"
-echo "📄 Documentation: /api-info"
-echo "🏥 Health Check: /health"
+echo "✅ Laravel ready!"
+echo "🌍 URL: $APP_URL"
+echo "📡 API: $APP_URL/api/v1"
+echo "🏥 Health: $APP_URL/health"
 echo ""
 
-# Démarrer le serveur
-echo "🌟 Starting Laravel server on 0.0.0.0:$PORT..."
-php artisan serve --host=0.0.0.0 --port=$PORT --env=$APP_ENV
+# Démarrage du serveur
+echo "🎯 Starting server on 0.0.0.0:$PORT"
+exec php artisan serve --host=0.0.0.0 --port=$PORT --env=production
