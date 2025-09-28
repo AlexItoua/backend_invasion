@@ -3,12 +3,17 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return response()->json([
-        'status' => true,
-        'message' => 'Backend Invasion API',
-        'endpoints' => [
-            'api' => '/api/v1/',
-            'auth' => '/api/v1/auth/'
-        ]
-    ]);
+    try {
+        return response()->json([
+            'status' => true,
+            'message' => 'Test simple - Laravel fonctionne',
+            'timestamp' => now()
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ], 500);
+    }
 });
