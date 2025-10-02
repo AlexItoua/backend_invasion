@@ -29,10 +29,10 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 RUN chmod -R 755 storage bootstrap/cache
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8080
 
-# Start command
+# Start command - CETTE LIGNE DOIT AVOIR 8080
 CMD php artisan config:clear && \
     php artisan cache:clear && \
     php artisan migrate --force && \
-    php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
+    php artisan serve --host=0.0.0.0 --port=8080
