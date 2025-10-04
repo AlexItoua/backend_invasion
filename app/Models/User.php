@@ -22,7 +22,8 @@ class User extends Authenticatable
         'zone_id',
         'ame_id',
         'device_token',
-        'notifications_actives'
+        'notifications_actives',
+        'is_active' // AJOUT
     ];
 
     protected $hidden = [
@@ -33,9 +34,10 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'notifications_actives' => 'boolean',
+        'is_active' => 'boolean', // AJOUT
     ];
 
-    // Relations existantes
+    // Relations existantes (garder toutes vos relations actuelles)
     public function zone(): BelongsTo
     {
         return $this->belongsTo(Zone::class);
@@ -57,10 +59,6 @@ class User extends Authenticatable
     }
 
     // Relations pour le chat
-
-    /**
-     * Conversations où l'utilisateur est participant
-     */
     public function conversations(): BelongsToMany
     {
         return $this->belongsToMany(Conversation::class, 'conversation_user')
@@ -68,54 +66,58 @@ class User extends Authenticatable
             ->orderBy('updated_at', 'desc');
     }
 
-    /**
-     * Messages envoyés par cet utilisateur
-     */
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class, 'sender_id');
     }
 
-    /**
-     * Âme associée à cet utilisateur (si l'utilisateur représente une âme)
-     */
     public function ame(): BelongsTo
     {
         return $this->belongsTo(Ame::class, 'ame_id');
     }
 
-    /**
-     * Notifications reçues par l'utilisateur
-     */
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class, 'destinataire_id')
             ->where('destinataire_type', 'user');
     }
 
-    // Méthodes utilitaires pour le chat
+    // MÉTHODES POUR L'ACTIVATION/DÉSACTIVATION - AJOUT
+    public function activate(): void
+    {
+        $this->update(['is_active' => true]);
+    }
 
-    /**
-     * Vérifier si l'utilisateur peut accéder à une conversation
-     */
+    public function deactivate(): void
+    {
+        $this->update(['is_active' => false]);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeInactive($query)
+    {
+        return $query->where('is_active', false);
+    }
+
+    // Méthodes utilitaires existantes (garder tout le reste)
     public function canAccessConversation(Conversation $conversation): bool
     {
-        // Si l'utilisateur est participant
         if ($this->conversations()->where('conversation_id', $conversation->id)->exists()) {
             return true;
         }
 
-        // Si l'utilisateur est l'âme de la conversation (via ame_id)
         if ($this->ame_id && $conversation->ame_id === $this->ame_id) {
             return true;
         }
 
-        // Si l'utilisateur est l'encadreur de l'âme
         if ($conversation->ame && $conversation->ame->assigne_a === $this->id) {
             return true;
         }
 
-        // Vérification par email/téléphone (pour compatibilité)
         if ($conversation->ame) {
             $ame = $conversation->ame;
             if (($ame->telephone && $ame->telephone === $this->telephone) ||
@@ -128,25 +130,16 @@ class User extends Authenticatable
         return false;
     }
 
-    /**
-     * Vérifier si l'utilisateur représente une âme
-     */
     public function isAme(): bool
     {
         return $this->role === 'ame' || !is_null($this->ame_id);
     }
 
-    /**
-     * Obtenir le type d'expéditeur pour les messages
-     */
     public function getSenderType(): string
     {
         return $this->isAme() ? 'ame' : 'user';
     }
 
-    /**
-     * Obtenir le nom d'affichage selon le contexte
-     */
     public function getDisplayName(): string
     {
         if ($this->isAme() && $this->ame) {
@@ -155,17 +148,11 @@ class User extends Authenticatable
         return $this->nom;
     }
 
-    /**
-     * Vérifier si l'utilisateur peut envoyer un message dans une conversation
-     */
     public function canSendMessageTo(Conversation $conversation): bool
     {
         return $this->canAccessConversation($conversation);
     }
 
-    /**
-     * Obtenir le nombre de messages non lus
-     */
     public function getUnreadMessagesCount(): int
     {
         return Message::whereHas('conversation', function ($query) {
