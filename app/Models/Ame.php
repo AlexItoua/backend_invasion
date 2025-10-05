@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Ame extends Model
 {
@@ -47,46 +49,54 @@ class Ame extends Model
 
     protected $with = ['campagne', 'encadreur', 'cellule'];
 
-    public function campagne()
+    // Relations existantes
+    public function campagne(): BelongsTo
     {
         return $this->belongsTo(Campagne::class);
     }
 
-    public function encadreur()
+    public function encadreur(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigne_a');
     }
 
-    public function getImageUrlAttribute()
-    {
-        return $this->image ? asset('storage/' . $this->image) : null;
-    }
-
-    public function cellule()
+    public function cellule(): BelongsTo
     {
         return $this->belongsTo(Cellule::class);
     }
 
-    public function interactions()
+    public function interactions(): HasMany
     {
         return $this->hasMany(Interaction::class);
     }
 
-    public function etapesValidees()
+    public function etapesValidees(): HasMany
     {
         return $this->hasMany(EtapeValidee::class);
     }
 
-    public function conversations()
+    public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class);
     }
 
-    public function notifications()
+    public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class, 'destinataire_id');
     }
 
+    // ✅ NOUVELLES RELATIONS pour les parcours
+    public function parcoursAmes(): HasMany
+    {
+        return $this->hasMany(ParcoursAmes::class, 'ame_id');
+    }
+
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class);
+    }
+
+    // Scopes existants
     public function scopePourCampagne($query, $campagneId)
     {
         return $query->where('campagne_id', $campagneId);
@@ -107,6 +117,18 @@ class Ame extends Model
         return $query->selectRaw("*, (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance", [$lat, $lng, $lat])
             ->having('distance', '<', $radius)
             ->orderBy('distance');
+    }
+
+    // ✅ NOUVEAU SCOPE pour les âmes en suivi
+    public function scopeEnSuivi($query)
+    {
+        return $query->where('suivi', true);
+    }
+
+    // Accessors existants
+    public function getImageUrlAttribute()
+    {
+        return $this->image ? asset('storage/' . $this->image) : null;
     }
 
     public function getPositionAttribute()

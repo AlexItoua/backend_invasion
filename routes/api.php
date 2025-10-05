@@ -96,9 +96,11 @@ Route::prefix('v1')->group(function () {
         // =============================================
 
         // Routes pour les âmes
+        // Routes pour les âmes
         Route::prefix('ames')->controller(AmeController::class)->group(function () {
             // Routes spéciales (avant les routes avec paramètres)
             Route::get('/recentes', 'recentes')->name('api.ames.recentes');
+            Route::get('/en-suivi', 'getAmesEnSuivi')->name('api.ames.en-suivi'); // ✅ NOUVELLE ROUTE
             Route::get('/nearby', 'nearBy')->name('api.ames.nearby');
             Route::get('/stats', 'stats')->name('api.ames.stats');
             Route::get('/search', 'search')->name('api.ames.search');
@@ -114,7 +116,7 @@ Route::prefix('v1')->group(function () {
             // Routes relationnelles
             Route::get('/{ame}/conversations', 'conversations')->name('api.ames.conversations');
             Route::get('/{ame}/interactions', 'interactions')->name('api.ames.interactions');
-            Route::get('/{ame}/parcours', 'parcours')->name('api.ames.parcours');
+            Route::get('/{ame}/parcours', 'getParcoursParAme')->name('api.ames.parcours'); // ✅ NOUVELLE ROUTE
         });
 
         // Routes pour les campagnes

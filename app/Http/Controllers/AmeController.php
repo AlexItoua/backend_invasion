@@ -436,4 +436,79 @@ class AmeController extends Controller
         $conversations = $ame->conversations()->with(['participants', 'dernierMessage'])->get();
         return response()->json($conversations);
     }
+    public function getAmesEnSuivi()
+    {
+        try {
+            $amesEnSuivi = Ame::enSuivi()
+                ->with([
+                    'cellule:id,nom,responsable_id',
+                    'campagne:id,nom,date_debut,date_fin',
+                    'zone:id,nom',
+                    'encadreur:id,name,email',
+                    'parcoursAmes' => function ($query) {
+                        $query->where('statut', 'en_cours')
+                            ->with([
+                                'parcours:id,nom,description',
+                                'etapesValidees:id,parcours_ame_id,etape_parcours_id,date_validation'
+                            ]);
+                    },
+                    'interactions' => function ($query) {
+                        $query->latest()->limit(5);
+                    }
+                ])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // Ajouter des informations supplémentaires pour chaque âme
+            $amesEnSuivi = $amesEnSuivi->map(function ($ame) {
+                $ame->parcours_count = $ame->parcoursAmes->count();
+                $ame->interactions_count = $ame->interactions->count();
+                return $ame;
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Âmes en suivi récupérées avec succès',
+                'data' => $amesEnSuivi,
+                'count' => $amesEnSuivi->count(),
+                'meta' => [
+                    'total_interactions' => $amesEnSuivi->sum('interactions_count'),
+                    'total_parcours_actifs' => $amesEnSuivi->sum('parcours_count'),
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Erreur lors de la récupération des âmes en suivi',
+                'error' => $e->getMessage(),
+                'data' => [],
+            ], 500);
+        }
+    }
+    public function getParcoursParAme($ameId)
+    {
+        try {
+            $ame = Ame::with([
+                'parcoursAmes' => function ($query) {
+                    $query->with([
+                        'parcours.etapes',
+                        'etapesValidees.etape'
+                    ]);
+                }
+            ])->findOrFail($ameId);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Parcours de l\'âme récupérés avec succès',
+                'data' => $ame->parcoursAmes,
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Erreur lors de la récupération des parcours',
+                'error' => $e->getMessage(),
+                'data' => [],
+            ], 500);
+        }
+    }
 }
