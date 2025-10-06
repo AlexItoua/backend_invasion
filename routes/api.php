@@ -270,12 +270,14 @@ Route::prefix('v1')->group(function () {
             Route::post('/', 'store')->name('api.users.store');
             Route::get('/search', 'search')->name('api.users.search');
             Route::get('/active', 'active')->name('api.users.active');
+            Route::get('/historiques', 'historiques')->name('api.users.historiques'); // ✅ ajout
             Route::get('/{id}', 'show')->name('api.users.show');
             Route::put('/{id}', 'update')->name('api.users.update');
             Route::delete('/{id}', 'destroy')->name('api.users.destroy');
             Route::post('/{id}/activate', 'activate')->name('api.users.activate');
             Route::post('/{id}/deactivate', 'deactivate')->name('api.users.deactivate');
         });
+
 
         // Routes zones protégées (pour les opérations sensibles)
         Route::prefix('zones')->controller(ZoneController::class)->group(function () {

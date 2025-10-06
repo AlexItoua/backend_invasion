@@ -8,6 +8,9 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Historique;
+use Illuminate\Support\Facades\Auth;
+
 
 class UserController extends Controller
 {
@@ -156,7 +159,16 @@ class UserController extends Controller
     {
         try {
             $user = User::findOrFail($id);
+
+            // Suppression de l'utilisateur
             $user->delete();
+
+            // Enregistrer dans l'historique
+            Historique::create([
+                'user_id' => Auth::id(), // celui qui supprime
+                'action' => 'suppression',
+                'description' => "L'utilisateur " . Auth::user()->nom . " a supprimé le compte de " . $user->nom . " (ID: {$user->id})",
+            ]);
 
             return response()->json([
                 'status' => true,
@@ -172,6 +184,7 @@ class UserController extends Controller
             ], 500);
         }
     }
+
 
     // MÉTHODES POUR L'ACTIVATION/DÉSACTIVATION - AJOUT
     public function activate($id)
