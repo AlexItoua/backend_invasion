@@ -270,7 +270,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/', 'store')->name('api.users.store');
             Route::get('/search', 'search')->name('api.users.search');
             Route::get('/active', 'active')->name('api.users.active');
-            Route::get('/historiques', 'historiques')->name('api.users.historiques'); // ✅ ajout
+            Route::get('/historiques', [\App\Http\Controllers\HistoriqueController::class, 'index'])->name('api.users.historiques');
+            // ✅ ajout
             Route::get('/{id}', 'show')->name('api.users.show');
             Route::put('/{id}', 'update')->name('api.users.update');
             Route::delete('/{id}', 'destroy')->name('api.users.destroy');
