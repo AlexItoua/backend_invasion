@@ -47,17 +47,25 @@ class AmeController extends Controller
             $perPage = $request->get('per_page', 15);
             $ames = $query->with(['campagne', 'encadreur', 'cellule'])->paginate($perPage);
 
-            // 🔥 Transformer les chemins d'images en URLs complètes
-            foreach ($ames as $ame) {
-                if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
-                    $ame->image = url('storage/' . $ame->image);
-                }
-            }
+            // Transformer manuellement chaque élément
+            $ames->setCollection(
+                $ames->getCollection()->map(function ($ame) {
+                    return $this->transformImageUrl($ame);
+                })
+            );
 
             return response()->json([
                 'status' => true,
-                'message' => 'Liste des âmes récupérée avec succès',
-                'data' => $ames,
+                'message' => 'Âmes récupérées avec succès',
+                'data' => [
+                    'data' => $ames->items(),
+                    'current_page' => $ames->currentPage(),
+                    'last_page' => $ames->lastPage(),
+                    'per_page' => $ames->perPage(),
+                    'total' => $ames->total(),
+                    'from' => $ames->firstItem(),
+                    'to' => $ames->lastItem(),
+                ],
             ], 200);
         } catch (Exception $e) {
             return response()->json([
@@ -128,21 +136,15 @@ class AmeController extends Controller
 
             $data = $request->all();
 
-            // 🔥 GESTION INTELLIGENTE DES IMAGES
+            // Gestion des images
             if ($request->hasFile('image_file')) {
-                // Upload depuis un fichier
                 $path = $request->file('image_file')->store('images/ames', 'public');
                 $data['image'] = $path;
             } elseif ($request->filled('image')) {
-                // Upload depuis Base64
                 $imageData = $request->image;
 
-                // Vérifier si c'est du Base64
                 if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
-                    // Extraire l'extension
                     $extension = $matches[1];
-
-                    // Nettoyer le Base64
                     $imageData = substr($imageData, strpos($imageData, ',') + 1);
                     $imageData = base64_decode($imageData);
 
@@ -153,16 +155,11 @@ class AmeController extends Controller
                         ], 422);
                     }
 
-                    // Générer un nom unique
                     $filename = 'soul_' . time() . '_' . uniqid() . '.' . $extension;
                     $path = 'images/ames/' . $filename;
-
-                    // Sauvegarder le fichier
                     Storage::disk('public')->put($path, $imageData);
-
                     $data['image'] = $path;
                 } else {
-                    // Si ce n'est pas du Base64, on garde la valeur telle quelle (URL ou chemin)
                     $data['image'] = $imageData;
                 }
             }
@@ -181,13 +178,8 @@ class AmeController extends Controller
             }
 
             unset($data['image_file']);
-
             $ame = Ame::create($data);
-
-            // 🔥 Transformer le chemin en URL complète pour la réponse
-            if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
-                $ame->image = url('storage/' . $ame->image);
-            }
+            $ame = $this->transformImageUrl($ame);
 
             return response()->json([
                 'status' => true,
@@ -207,7 +199,6 @@ class AmeController extends Controller
     {
         try {
             $dateAujourdhui = now()->startOfDay();
-
             $query = Ame::query()
                 ->where('created_at', '>=', $dateAujourdhui)
                 ->orderBy('created_at', 'desc');
@@ -224,12 +215,8 @@ class AmeController extends Controller
                 $ames = $query->with(['campagne', 'encadreur', 'cellule'])->get();
             }
 
-            // 🔥 Transformer les chemins d'images en URLs complètes
             $ames->transform(function ($ame) {
-                if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
-                    $ame->image = url('storage/' . $ame->image);
-                }
-                return $ame;
+                return $this->transformImageUrl($ame);
             });
 
             return response()->json([
@@ -326,9 +313,8 @@ class AmeController extends Controller
                 ], 422);
             }
 
-            // 🔥 GESTION INTELLIGENTE DES IMAGES (UPDATE)
+            // Gestion des images (UPDATE)
             if ($request->hasFile('image_file')) {
-                // Supprimer l'ancienne image si elle existe
                 if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
                     $oldPath = str_replace(url('storage/'), '', $ame->image);
                     Storage::disk('public')->delete($oldPath);
@@ -339,9 +325,7 @@ class AmeController extends Controller
             } elseif ($request->filled('image')) {
                 $imageData = $request->image;
 
-                // Vérifier si c'est du Base64
                 if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
-                    // Supprimer l'ancienne image
                     if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
                         $oldPath = str_replace(url('storage/'), '', $ame->image);
                         Storage::disk('public')->delete($oldPath);
@@ -361,7 +345,6 @@ class AmeController extends Controller
                     $filename = 'soul_' . time() . '_' . uniqid() . '.' . $extension;
                     $path = 'images/ames/' . $filename;
                     Storage::disk('public')->put($path, $imageData);
-
                     $data['image'] = $path;
                 } else {
                     $data['image'] = $imageData;
@@ -379,13 +362,8 @@ class AmeController extends Controller
             }
 
             unset($data['image_file']);
-
             $ame->update($data);
-
-            // 🔥 Transformer le chemin en URL complète pour la réponse
-            if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
-                $ame->image = url('storage/' . $ame->image);
-            }
+            $ame = $this->transformImageUrl($ame);
 
             return response()->json([
                 'status' => true,
@@ -415,10 +393,7 @@ class AmeController extends Controller
                 ], 404);
             }
 
-            // 🔥 Transformer le chemin en URL complète
-            if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
-                $ame->image = url('storage/' . $ame->image);
-            }
+            $ame = $this->transformImageUrl($ame);
 
             return response()->json([
                 'status' => true,
@@ -533,34 +508,18 @@ class AmeController extends Controller
     public function getAmesEnSuivi()
     {
         try {
-            $amesEnSuivi = Ame::enSuivi()
+            // Remplacer la méthode scope enSuivi() par une condition directe
+            $amesEnSuivi = Ame::where('suivi', true)
                 ->with([
                     'cellule:id,nom,responsable_id',
                     'campagne:id,nom,date_debut,date_fin',
-                    'zone:id,nom',
                     'encadreur:id,name,email',
-                    'parcoursAmes' => function ($query) {
-                        $query->where('statut', 'en_cours')
-                            ->with([
-                                'parcours:id,nom,description',
-                                'etapesValidees:id,parcours_ame_id,etape_parcours_id,date_validation'
-                            ]);
-                    },
-                    'interactions' => function ($query) {
-                        $query->latest()->limit(5);
-                    }
                 ])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
             $amesEnSuivi = $amesEnSuivi->map(function ($ame) {
-                // 🔥 Transformer l'image en URL
-                if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
-                    $ame->image = url('storage/' . $ame->image);
-                }
-
-                $ame->parcours_count = $ame->parcoursAmes->count();
-                $ame->interactions_count = $ame->interactions->count();
+                $ame = $this->transformImageUrl($ame);
                 return $ame;
             });
 
@@ -569,10 +528,6 @@ class AmeController extends Controller
                 'message' => 'Âmes en suivi récupérées avec succès',
                 'data' => $amesEnSuivi,
                 'count' => $amesEnSuivi->count(),
-                'meta' => [
-                    'total_interactions' => $amesEnSuivi->sum('interactions_count'),
-                    'total_parcours_actifs' => $amesEnSuivi->sum('parcours_count'),
-                ]
             ], 200);
         } catch (Exception $e) {
             return response()->json([
@@ -584,35 +539,21 @@ class AmeController extends Controller
         }
     }
 
-    public function getParcoursParAme($ameId)
+    /**
+     * Transformation des URLs d'images
+     */
+    private function transformImageUrl($ame)
     {
-        try {
-            $ame = Ame::with([
-                'parcoursAmes' => function ($query) {
-                    $query->with([
-                        'parcours.etapes',
-                        'etapesValidees.etape'
-                    ]);
-                }
-            ])->findOrFail($ameId);
-
-            // 🔥 Transformer l'image en URL
-            if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
-                $ame->image = url('storage/' . $ame->image);
+        if ($ame->image) {
+            if (filter_var($ame->image, FILTER_VALIDATE_URL)) {
+                return $ame;
             }
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Parcours de l\'âme récupérés avec succès',
-                'data' => $ame->parcoursAmes,
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Erreur lors de la récupération des parcours',
-                'error' => $e->getMessage(),
-                'data' => [],
-            ], 500);
+            if (strpos($ame->image, 'images/ames/') === 0) {
+                $ame->image = url('storage/' . $ame->image);
+            }
         }
+
+        return $ame;
     }
 }
