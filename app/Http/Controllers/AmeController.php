@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AmeController extends Controller
 {
@@ -88,8 +89,11 @@ class AmeController extends Controller
                 'adresse' => 'nullable|string',
                 'quartier' => 'nullable|string|max:255',
                 'ville' => 'nullable|string|max:255',
-                'image' => 'nullable|string',
-                'image_file' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+
+                // 🔥 NOUVELLE VALIDATION : Supporte à la fois fichier et Base64
+                'image' => 'nullable|string|max:10000000', // ~10MB en Base64
+                'image_file' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:5120', // 5MB max
+
                 'suivi' => 'boolean',
                 'derniere_interaction' => 'nullable|date',
                 'date_conversion' => 'nullable|date',
@@ -136,32 +140,10 @@ class AmeController extends Controller
 
             $data = $request->all();
 
-            // Gestion des images
-            if ($request->hasFile('image_file')) {
-                $path = $request->file('image_file')->store('images/ames', 'public');
-                $data['image'] = $path;
-            } elseif ($request->filled('image')) {
-                $imageData = $request->image;
-
-                if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
-                    $extension = $matches[1];
-                    $imageData = substr($imageData, strpos($imageData, ',') + 1);
-                    $imageData = base64_decode($imageData);
-
-                    if ($imageData === false) {
-                        return response()->json([
-                            'status' => false,
-                            'message' => 'Image Base64 invalide',
-                        ], 422);
-                    }
-
-                    $filename = 'soul_' . time() . '_' . uniqid() . '.' . $extension;
-                    $path = 'images/ames/' . $filename;
-                    Storage::disk('public')->put($path, $imageData);
-                    $data['image'] = $path;
-                } else {
-                    $data['image'] = $imageData;
-                }
+            // 🔥 GESTION OPTIMISÉE DES IMAGES
+            $imagePath = $this->handleImageUpload($request);
+            if ($imagePath !== false) { // false signifie erreur, null signifie pas d'image
+                $data['image'] = $imagePath;
             }
 
             if ($request->latitude && $request->longitude) {
@@ -192,6 +174,69 @@ class AmeController extends Controller
                 'message' => 'Erreur lors de la création de l\'âme',
                 'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * 🔥 NOUVELLE MÉTHODE : Gestion centralisée des uploads d'images
+     */
+    private function handleImageUpload(Request $request)
+    {
+        try {
+            // Priorité 1: Fichier image uploadé
+            if ($request->hasFile('image_file')) {
+                $file = $request->file('image_file');
+
+                // Validation de la taille
+                if ($file->getSize() > 5 * 1024 * 1024) { // 5MB
+                    throw new Exception("L'image ne doit pas dépasser 5MB");
+                }
+
+                $filename = 'soul_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('images/ames', $filename, 'public');
+
+                return $path;
+            }
+
+            // Priorité 2: Image Base64
+            if ($request->filled('image')) {
+                $imageData = $request->image;
+
+                // Vérifier si c'est une Data URL (data:image/...)
+                if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
+                    $extension = $matches[1];
+                    $imageData = substr($imageData, strpos($imageData, ',') + 1);
+                } else {
+                    // Sinon, supposer que c'est du Base64 pur
+                    $extension = 'jpg';
+                }
+
+                // Décoder le Base64
+                $decodedImage = base64_decode($imageData);
+                if ($decodedImage === false) {
+                    throw new Exception("Image Base64 invalide");
+                }
+
+                // Vérifier la taille après décodage
+                if (strlen($decodedImage) > 5 * 1024 * 1024) { // 5MB
+                    throw new Exception("L'image décodée ne doit pas dépasser 5MB");
+                }
+
+                $filename = 'soul_' . time() . '_' . uniqid() . '.' . $extension;
+                $path = 'images/ames/' . $filename;
+
+                // Sauvegarder dans le storage
+                Storage::disk('public')->put($path, $decodedImage);
+
+                return $path;
+            }
+
+            // Aucune image fournie
+            return null;
+        } catch (Exception $e) {
+            // Logger l'erreur mais ne pas bloquer la création de l'âme
+            \Log::error('Erreur upload image: ' . $e->getMessage());
+            return null; // Retourner null pour continuer sans image
         }
     }
 
@@ -263,7 +308,7 @@ class AmeController extends Controller
                 'quartier' => 'nullable|string|max:255',
                 'ville' => 'nullable|string|max:255',
                 'image' => 'nullable|string',
-                'image_file' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+                'image_file' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:5120',
                 'date_conversion' => 'nullable|date',
                 'campagne_id' => 'sometimes|required|exists:campagnes,id',
                 'type_decision' => 'nullable|string',
@@ -313,41 +358,17 @@ class AmeController extends Controller
                 ], 422);
             }
 
-            // Gestion des images (UPDATE)
-            if ($request->hasFile('image_file')) {
+            // 🔥 GESTION OPTIMISÉE DES IMAGES (UPDATE)
+            if ($request->hasFile('image_file') || $request->filled('image')) {
+                // Supprimer l'ancienne image si elle existe
                 if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
                     $oldPath = str_replace(url('storage/'), '', $ame->image);
                     Storage::disk('public')->delete($oldPath);
                 }
 
-                $path = $request->file('image_file')->store('images/ames', 'public');
-                $data['image'] = $path;
-            } elseif ($request->filled('image')) {
-                $imageData = $request->image;
-
-                if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
-                    if ($ame->image && !filter_var($ame->image, FILTER_VALIDATE_URL)) {
-                        $oldPath = str_replace(url('storage/'), '', $ame->image);
-                        Storage::disk('public')->delete($oldPath);
-                    }
-
-                    $extension = $matches[1];
-                    $imageData = substr($imageData, strpos($imageData, ',') + 1);
-                    $imageData = base64_decode($imageData);
-
-                    if ($imageData === false) {
-                        return response()->json([
-                            'status' => false,
-                            'message' => 'Image Base64 invalide',
-                        ], 422);
-                    }
-
-                    $filename = 'soul_' . time() . '_' . uniqid() . '.' . $extension;
-                    $path = 'images/ames/' . $filename;
-                    Storage::disk('public')->put($path, $imageData);
-                    $data['image'] = $path;
-                } else {
-                    $data['image'] = $imageData;
+                $imagePath = $this->handleImageUpload($request);
+                if ($imagePath !== false) {
+                    $data['image'] = $imagePath;
                 }
             }
 
@@ -508,7 +529,6 @@ class AmeController extends Controller
     public function getAmesEnSuivi()
     {
         try {
-            // Remplacer la méthode scope enSuivi() par une condition directe
             $amesEnSuivi = Ame::where('suivi', true)
                 ->with([
                     'cellule:id,nom,responsable_id',
