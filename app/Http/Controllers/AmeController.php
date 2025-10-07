@@ -90,7 +90,7 @@ class AmeController extends Controller
                 'quartier' => 'nullable|string|max:255',
                 'ville' => 'nullable|string|max:255',
 
-                // 🔥 NOUVELLE VALIDATION : Supporte à la fois fichier et Base64
+                // 🔥 Validation pour Base64 et fichiers
                 'image' => 'nullable|string|max:10000000', // ~10MB en Base64
                 'image_file' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:5120', // 5MB max
 
@@ -115,6 +115,7 @@ class AmeController extends Controller
                 ], 422);
             }
 
+            // Validation de la campagne
             $campagne = Campagne::find($request->campagne_id);
             if ($request->date_conversion) {
                 if ($request->date_conversion < $campagne->date_debut) {
@@ -131,6 +132,7 @@ class AmeController extends Controller
                 }
             }
 
+            // Validation géolocalisation
             if (($request->latitude && !$request->longitude) || (!$request->latitude && $request->longitude)) {
                 return response()->json([
                     'status' => false,
@@ -142,10 +144,14 @@ class AmeController extends Controller
 
             // 🔥 GESTION OPTIMISÉE DES IMAGES
             $imagePath = $this->handleImageUpload($request);
-            if ($imagePath !== false) { // false signifie erreur, null signifie pas d'image
+            if ($imagePath !== false) { // false = erreur, null = pas d'image
                 $data['image'] = $imagePath;
+            } else {
+                // Si erreur d'upload, continuer sans image
+                unset($data['image']);
             }
 
+            // Géolocalisation automatique
             if ($request->latitude && $request->longitude) {
                 if (!$request->geoloc_timestamp) {
                     $data['geoloc_timestamp'] = now();
@@ -159,16 +165,35 @@ class AmeController extends Controller
                 }
             }
 
+            // Nettoyage des données
             unset($data['image_file']);
+
+            // Création de l'âme
             $ame = Ame::create($data);
+
+            // 🔥 CORRECTION : Charger les relations PUIS transformer l'URL
+            $ame->load(['campagne', 'encadreur', 'cellule']);
             $ame = $this->transformImageUrl($ame);
+
+            // Log pour debug
+            \Log::info('Âme créée', [
+                'id' => $ame->id,
+                'nom' => $ame->nom,
+                'image_path' => $ame->image,
+            ]);
 
             return response()->json([
                 'status' => true,
                 'message' => 'Âme créée avec succès',
-                'data' => $ame->load(['campagne', 'encadreur', 'cellule']),
+                'data' => $ame,
             ], 201);
         } catch (Exception $e) {
+            // Log de l'erreur pour debug
+            \Log::error('Erreur création âme', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'status' => false,
                 'message' => 'Erreur lors de la création de l\'âme',
