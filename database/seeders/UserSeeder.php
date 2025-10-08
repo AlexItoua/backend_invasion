@@ -27,22 +27,13 @@ class UserSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        User::create([
-            'nom' => 'Yannick Dykoka',
-            'email' => 'kykoka@gmail.com',
-            'password' => Hash::make('invasion2025'),
-            'telephone' => '068731172',
-            'role' => 'evangeliste',
-            'zone_id' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+
         User::create([
             'nom' => 'ilitch',
-            'email' => 'edmet@gmail.com',
+            'email' => 'ilitchoint@gmail.com',
             'password' => Hash::make('invasion2025'),
             'telephone' => '068731172',
-            'role' => 'gagneur',
+            'role' => 'admin',
             'zone_id' => null,
             'created_at' => now(),
             'updated_at' => now(),
